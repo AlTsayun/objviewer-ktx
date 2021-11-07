@@ -1,4 +1,4 @@
-package com.bsuir.objviewer.core.models
+package com.bsuir.objviewer.core.model
 
 sealed interface ObjEntry {
 

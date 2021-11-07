@@ -1,12 +1,10 @@
 
-@file:Suppress(
-    "NOTHING_TO_INLINE",
-)
-package com.bsuir.objviewer.core.models
+@file:Suppress("NOTHING_TO_INLINE")
+package com.bsuir.objviewer.core.model
 
-import com.bsuir.objviewer.core.extensions.packInts
-import com.bsuir.objviewer.core.extensions.unpackInt1
-import com.bsuir.objviewer.core.extensions.unpackInt2
+import com.bsuir.objviewer.core.extension.packInts
+import com.bsuir.objviewer.core.extension.unpackInt1
+import com.bsuir.objviewer.core.extension.unpackInt2
 
 /**
  * Constructs an [IntSize] from width and height [Int] values.

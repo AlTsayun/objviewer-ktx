@@ -1,4 +1,4 @@
-package com.bsuir.objviewer.core.extensions
+package com.bsuir.objviewer.core.extension
 
 import java.util.ArrayList
 

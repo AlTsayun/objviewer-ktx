@@ -1,5 +1,5 @@
 @file:Suppress("NOTHING_TO_INLINE")
-package com.bsuir.objviewer.core.extensions
+package com.bsuir.objviewer.core.extension
 
 /*
  * Copyright 2019 The Android Open Source Project
@@ -59,4 +59,42 @@ inline fun unpackInt1(value: Long): Int {
  */
 inline fun unpackInt2(value: Long): Int {
     return value.and(0xFFFFFFFF).toInt()
+}
+
+/**
+ * Packs four UByte values into one Int value for use in inline classes.
+ */
+inline fun packUBytes(val1: UByte, val2: UByte, val3: UByte, val4: UByte): Int {
+    return val1.toInt().shl(24) or
+            val2.toInt().shl(16) or
+            val3.toInt().shl(8) or
+            val4.toInt()
+}
+
+/**
+ * Unpacks the first Byte value in [packUBytes] from its returned UInt.
+ */
+inline fun unpackUByte1(value: Int): UByte {
+    return value.shr(24).toUByte()
+}
+
+/**
+ * Unpacks the second UByte value in [packUBytes] from its returned UInt.
+ */
+inline fun unpackUByte2(value: Int): UByte {
+    return value.shr(16).toUByte()
+}
+
+/**
+ * Unpacks the third UByte value in [packUBytes] from its returned UInt.
+ */
+inline fun unpackUByte3(value: Int): UByte {
+    return value.shr(8).toUByte()
+}
+
+/**
+ * Unpacks the fourth UByte value in [packUBytes] from its returned UInt.
+ */
+inline fun unpackUByte4(value: Int): UByte {
+    return value.and(0xFFFF).toUByte()
 }

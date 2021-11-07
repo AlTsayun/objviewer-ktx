@@ -1,7 +1,7 @@
 package com.bsuir.objviewer.service
 
-import com.bsuir.objviewer.core.models.ObjEntries
-import com.bsuir.objviewer.core.models.ObjEntry.*
+import com.bsuir.objviewer.core.model.ObjEntries
+import com.bsuir.objviewer.core.model.ObjEntry.*
 
 class ObjParser {
 

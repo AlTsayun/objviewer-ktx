@@ -1,57 +1,66 @@
 package com.bsuir.objviewer.core.zbuffer
 
-import com.bsuir.objviewer.core.extensions.packInts
-import com.bsuir.objviewer.core.extensions.unpackInt1
-import com.bsuir.objviewer.core.extensions.unpackInt2
-import com.bsuir.objviewer.core.models.Color
-import java.util.ArrayList
-import java.util.HashMap
+import com.bsuir.objviewer.core.extension.packInts
+import com.bsuir.objviewer.core.extension.unpackInt1
+import com.bsuir.objviewer.core.extension.unpackInt2
+import com.bsuir.objviewer.core.model.Color
 
 @JvmInline
-value class Coordinates internal constructor(private val packedValue: Long){
+value class Coordinates internal constructor(private val packedValue: Long) {
     val x: Int
         get() = unpackInt1(packedValue)
 
     val y: Int
         get() = unpackInt2(packedValue)
 }
-private fun Coordinates(x: Int, y: Int) = Coordinates(packInts(x,y))
 
-class ZBuffer(width: Int, height: Int) {
-    private val items: Array<Array<UInt>>
-    private val _chunkedItems: MutableMap<Color, MutableList<Coordinates>>
-    val chunkedItems: Map<Color, List<Coordinates>>
-        get() = _chunkedItems
+private fun Coordinates(x: Int, y: Int) = Coordinates(packInts(x, y))
 
-    init {
-        items = Array(height) {
-            Array(width) {UInt.MAX_VALUE
-            }
+@JvmInline
+value class DepthAndColor internal constructor(private val packedValue: Long) {
+    val depth: UInt
+        get() = unpackInt1(packedValue).toUInt()
+
+    val color: Color
+        get() = Color(unpackInt2(packedValue))
+}
+
+private fun DepthAndColor(depth: UInt, color: Color) = DepthAndColor(packInts(depth.toInt(), color.packedValue))
+
+typealias PointConsumer = (x: Int, y: Int, color: Color) -> Unit
+
+class ZBuffer(private val maxWidth: Int, private val maxHeight: Int, private val blank: Color) {
+    private val items: Array<Array<DepthAndColor>> =
+        Array(maxHeight) {
+            Array(maxWidth) { DepthAndColor(UInt.MAX_VALUE, blank) }
         }
-        _chunkedItems = HashMap()
-    }
 
-    operator fun get(i: Int): Array<UInt>{
+    var width: Int = maxWidth
+    var height: Int = maxHeight
+
+    operator fun get(i: Int): Array<DepthAndColor> {
         return items[i]
     }
 
-    fun addPoint(x: Int, y: Int, depth: UInt, color: Color){
-
-        if (this[y][x] > depth){
-            if (_chunkedItems[color] == null) {
-                _chunkedItems[color] = ArrayList()
+    fun invalidate() {
+        for (y: Int in 0 until height) {
+            for (x: Int in 0 until width) {
+                items[y][x] = DepthAndColor(UInt.MAX_VALUE, blank)
             }
-            _chunkedItems[color]?.add(Coordinates(x, y))
-            this[y][x] = depth
         }
     }
 
+    fun addPoint(x: Int, y: Int, depth: UInt, color: Color) {
+        if (this[y][x].depth > depth) {
+            this[y][x] = DepthAndColor(depth, color)
+        }
+    }
 
-//    fun transferTo(scope: DrawScope){
-//        chunkedItems.forEach{ entry ->
-//            val points = entry.value
-//                .map { Offset(it.x.toFloat(), it.y.toFloat()) }
-//            scope.drawPoints(points = points, pointMode = PointMode.Points, strokeWidth = 1f, color = entry.key)
-//        }
-//    }
+    fun transferTo(consumer: PointConsumer) {
+        for (y: Int in 0 until height) {
+            for (x: Int in 0 until width) {
+                consumer(x, y, items[y][x].color)
+            }
+        }
+    }
 }

@@ -1,5 +1,6 @@
-package com.bsuir.objviewer.core.models
+package com.bsuir.objviewer.core.model
 
+import com.bsuir.objviewer.core.extension.*
 import org.jetbrains.kotlinx.multik.ndarray.data.D1
 import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
 import java.util.*
@@ -8,10 +9,28 @@ data class FPoint2d(val x: Float, val y: Float)
 
 data class DepthPoint2d(val x: Int, val y: Int, val depth: UInt)
 
-data class Edge(val minX: Int, val minY: Int, val minDepth: UInt, val maxY: Int, val invDepthSlope: Float, val invSlope: Float)
+data class Edge(
+    val minX: Int,
+    val minY: Int,
+    val minDepth: UInt,
+    val maxY: Int,
+    val invDepthSlope: Float,
+    val invXSlope: Float
+)
 
-//todo: rewrite Color data class
-data class Color(val value: Int)
+fun Color(r: UByte, g: UByte, b: UByte, a: UByte): Color = Color(packUBytes(r, g, b, a))
+
+@JvmInline
+value class Color constructor(val packedValue: Int) {
+    val r: UByte
+        get() = unpackUByte1(packedValue)
+    val g: UByte
+        get() = unpackUByte2(packedValue)
+    val b: UByte
+        get() = unpackUByte3(packedValue)
+    val a: UByte
+        get() = unpackUByte4(packedValue)
+}
 
 data class ProcessedWorldObject(
     val id: UUID,
