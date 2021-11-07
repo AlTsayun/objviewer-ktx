@@ -62,12 +62,12 @@ class WorldCreator {
                     }
                 ),
                 cam = Camera(
-                    speed = 2.0,
+                    speed = 20.0,
                     front = mk.ndarray(listOf(1.0, 0.0, 0.0)),
                     position = mk.ndarray(listOf(-5.0, 0.5, 0.5)),
                     windowSize = IntSize(640, 480)
                 ),
-                lightSources = mutableListOf(LightSource(0f, 0f, 1000f))
+                lightSources = mutableListOf(LightSource(0.0, 100.0, 100.0))
             )
 
     }

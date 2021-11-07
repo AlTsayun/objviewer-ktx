@@ -7,12 +7,10 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.bsuir.objviewer.ObjViewer
 import com.bsuir.objviewer.core.algorithm.drawFillFace
-import com.bsuir.objviewer.core.algorithm.drawStrokeFace
 import com.bsuir.objviewer.core.algorithm.process
 import com.bsuir.objviewer.core.extension.cross
 import com.bsuir.objviewer.core.extension.normalized
 import com.bsuir.objviewer.core.model.Color
-import com.bsuir.objviewer.core.model.IntSize
 import com.bsuir.objviewer.core.model.World
 import com.bsuir.objviewer.core.zbuffer.ZBuffer
 import ktx.app.KtxScreen
@@ -90,8 +88,8 @@ class CanvasScreen(private val application: ObjViewer, private val world: World)
                 .map { process(it, world) }
                 .forEach { obj ->
                     obj.faces.forEach { face ->
-                        drawFillFace(face, Color(0u, 0u, UByte.MAX_VALUE, UByte.MAX_VALUE), zBuffer::addPoint)
-//                        drawStrokeFace(face, Color(0u, 0u, UByte.MAX_VALUE, UByte.MAX_VALUE), zBuffer::addPoint)
+                        drawFillFace(face, zBuffer::addPoint)
+//                        drawStrokeFace(face, zBuffer::addPoint)
                     }
                 }
             cam.isChanged = false

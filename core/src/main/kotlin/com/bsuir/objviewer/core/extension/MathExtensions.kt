@@ -5,6 +5,8 @@ import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
 import org.jetbrains.kotlinx.multik.ndarray.data.*
 import org.jetbrains.kotlinx.multik.ndarray.operations.div
+import org.jetbrains.kotlinx.multik.ndarray.operations.map
+import org.jetbrains.kotlinx.multik.ndarray.operations.sum
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -24,8 +26,8 @@ inline infix fun <reified T: Number> D1Array<T>.cross(another: D1Array<T>): D1Ar
 }
 
 fun D1Array<Double>.normalized(): D1Array<Double> {
-    require(this.size == 3)
-    return this / sqrt(this[0].pow(2) + this[1].pow(2) + this[2].pow(2))
+//    require(this.size == 3)
+    return this / sqrt(this.map {it.pow(2)}.sum())
 }
 
 fun sign(a: Int) = when {
@@ -34,9 +36,8 @@ fun sign(a: Int) = when {
     else -> 0
 }
 
-
 @Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
-/*internal*/ inline operator fun <T : Number> Number.times(other: T): T = when (this) {
+/*internal*/ inline operator fun <T : Number> T.times(other: T): T = when (this) {
     is Byte -> (this.toByte() * other.toByte()).toByte()
     is Short -> (this.toShort() * other.toShort()).toShort()
     is Int -> (this.toInt() * other.toInt())
@@ -46,9 +47,30 @@ fun sign(a: Int) = when {
     else -> throw Exception("Type not defined.")
 } as T
 
+@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
+/*internal*/ inline operator fun <T : Number> T.div(other: T): T = when (this) {
+    is Byte -> (this.toByte() / other.toByte()).toByte()
+    is Short -> (this.toShort() / other.toShort()).toShort()
+    is Int -> (this.toInt() / other.toInt())
+    is Long -> (this.toLong() / other.toLong())
+    is Float -> (this.toFloat() / other.toFloat())
+    is Double -> (this.toDouble() / other.toDouble())
+    else -> throw Exception("Type not defined.")
+} as T
 
 @Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
-/*internal*/ inline operator fun <T : Number> Number.minus(other: T): T = when (this) {
+/*internal*/ inline operator fun <T : Number> T.plus(other: T): T = when (this) {
+    is Byte -> (this.toByte() + other.toByte()).toByte()
+    is Short -> (this.toShort() + other.toShort()).toShort()
+    is Int -> (this.toInt() + other.toInt())
+    is Long -> (this.toLong() + other.toLong())
+    is Float -> (this.toFloat() + other.toFloat())
+    is Double -> (this.toDouble() + other.toDouble())
+    else -> throw Exception("Type not defined.")
+} as T
+
+@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
+/*internal*/ inline operator fun <T : Number> T.minus(other: T): T = when (this) {
     is Byte -> (this.toByte() - other.toByte()).toByte()
     is Short -> (this.toShort() - other.toShort()).toShort()
     is Int -> (this.toInt() - other.toInt())
@@ -57,3 +79,33 @@ fun sign(a: Int) = when {
     is Double -> (this.toDouble() - other.toDouble())
     else -> throw Exception("Type not defined.")
 } as T
+//
+//@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
+///*internal*/ inline operator fun UByte.times(other: Number): UByte = (this.toDouble() * other).toByte().toUByte()
+//
+//@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
+///*internal*/ inline operator fun UByte.div(other: Number): UByte = (this.toByte() / other).toByte().toUByte()
+//
+//@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
+///*internal*/ inline operator fun UByte.plus(other: Number): UByte = (this.toByte() + other).toByte().toUByte()
+//
+//@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
+///*internal*/ inline operator fun UByte.plus(other: UByte): UByte = (this.toInt() + other.toInt()).toByte().toUByte()
+//
+//@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
+///*internal*/ inline operator fun UByte.minus(other: Number): UByte = (this.toByte() - other).toByte().toUByte()
+
+fun UByte.timesNoOverflow(value: Double): UByte{
+    return (this.toDouble() * value)
+        .toInt()
+        .let {
+            if (it < UByte.MIN_VALUE.toInt()){
+                UByte.MIN_VALUE.toInt()
+            }
+            if (it < UByte.MAX_VALUE.toInt()){
+                UByte.MIN_VALUE.toInt()
+            }
+            it
+        }
+        .toUByte()
+}

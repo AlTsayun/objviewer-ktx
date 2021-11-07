@@ -1,12 +1,14 @@
 package com.bsuir.objviewer.core.algorithm
 
 import com.bsuir.objviewer.core.extension.cross
+import com.bsuir.objviewer.core.extension.normalized
 import com.bsuir.objviewer.core.extension.pairedInCycle
 import com.bsuir.objviewer.core.extension.sign
 import com.bsuir.objviewer.core.model.*
 import org.jetbrains.kotlinx.multik.api.linalg.dot
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
+import org.jetbrains.kotlinx.multik.ndarray.data.D1Array
 import org.jetbrains.kotlinx.multik.ndarray.data.get
 import org.jetbrains.kotlinx.multik.ndarray.operations.minus
 import kotlin.math.abs
@@ -34,7 +36,6 @@ fun process(obj: WorldObject, world: World): ProcessedWorldObject = with(world) 
 
             if (projectionV[2] < world.cam.projectionNear || projectionV[2] > world.cam.projectionFar) {
                 isFaceOutOfProjection = true
-                break
             }
 
             val point = FPoint2d(
@@ -45,51 +46,72 @@ fun process(obj: WorldObject, world: World): ProcessedWorldObject = with(world) 
             if (point.x < 0 || point.x > cam.windowSize.width ||
                 point.y < 0 || point.y > cam.windowSize.height) {
                 isFaceOutOfProjection = true
-                break
             }
 
             points.add(VertexProjections(modelV, viewV, projectionV, viewportV, point))
-
         }
 
+        val v0 = points[0].model
+        val v1 = points[1].model
+        val v2 = points[2].model
+        val line1 = mk.ndarray(listOf(v1[0].toDouble() - v0[0], v1[1].toDouble() - v0[1], v1[2].toDouble() - v0[2]))
+        val line2 = mk.ndarray(listOf(v2[0].toDouble() - v1[0], v2[1].toDouble() - v1[1], v2[2].toDouble() - v1[2]))
+        val faceNormal = (line1 cross line2).normalized()
+
         if (!isFaceOutOfProjection) {
-            val v0 = points[0].model
-            val v1 = points[1].model
-            val v2 = points[2].model
-            val line1 = mk.ndarray(listOf(v1[0].toDouble() - v0[0], v1[1].toDouble() - v0[1], v1[2].toDouble() - v0[2]))
-            val line2 = mk.ndarray(listOf(v2[0].toDouble() - v1[0], v2[1].toDouble() - v1[1], v2[2].toDouble() - v1[2]))
-            val faceNormal = line1 cross line2
-            if (faceNormal dot (world.cam.target - world.cam.position) > 0) {
+            if (faceNormal dot (world.cam.target - world.cam.position).normalized() > 0.0) {
                 isFacePointsOutwards = true
             }
         }
 
+        val invLightVectors = lightSources.map { light ->
+            (getCenter(points.map { it.model }) - light.coords).normalized()
+        }
+        val lightness = invLightVectors.map { ((it dot faceNormal) + 1) / 2 }.average()
+
         if (!isFaceOutOfProjection && !isFacePointsOutwards) {
-            faces.add(ProcessedFace(points.map { ProcessedFace.Item(DepthPoint2d(it.point.x.toInt(), it.point.y.toInt(), it.projection[2].toUInt())) }))
+            faces.add(ProcessedFace(
+                points.map {
+                    ProcessedFace.Item(DepthPoint2d(it.point.x.toInt(), it.point.y.toInt(), it.projection[2].toUInt()))
+                },
+                Color(UByte.MAX_VALUE, UByte.MAX_VALUE, UByte.MAX_VALUE, UByte.MAX_VALUE).multiplyLightness(lightness)
+            ))
         }
     }
     return ProcessedWorldObject(obj.id, faces)
 }
 
-fun drawLine(x1: Int,
-             y1: Int,
-             depth1: UInt,
-             x2: Int,
-             y2: Int,
-             depth2: UInt,
-             color: Color,
-             consumer: DepthPointConsumer) {
+fun getCenter(points: List<D1Array<Double>>): D1Array<Double>{
+    return mk.ndarray(listOf(
+        points.map { it[0] }.average(),
+        points.map { it[1] }.average(),
+        points.map { it[2] }.average(),
+    ))
+}
+
+fun drawLine(
+    x1: Int,
+    y1: Int,
+    depth1: UInt,
+    x2: Int,
+    y2: Int,
+    depth2: UInt,
+    color: Color,
+    consumer: DepthPointConsumer
+) {
     bresenham(x1, y1, depth1, x2, y2, depth2, color, consumer)
 }
 
-private fun bresenham(x1: Int,
-                      y1: Int,
-                      depth1: UInt,
-                      x2: Int,
-                      y2: Int,
-                      depth2: UInt,
-                      color: Color,
-                      consumer: (x: Int, y: Int, depth: UInt, color: Color) -> Unit) {
+private fun bresenham(
+    x1: Int,
+    y1: Int,
+    depth1: UInt,
+    x2: Int,
+    y2: Int,
+    depth2: UInt,
+    color: Color,
+    consumer: (x: Int, y: Int, depth: UInt, color: Color) -> Unit
+) {
     val deltaX = abs(x2 - x1)
     val deltaY = abs(y2 - y1)
     val deltaDepth = abs(depth2.toInt() - depth1.toInt())
@@ -162,7 +184,6 @@ private fun bresenham(x1: Int,
 
 fun drawFillFace(
     face: ProcessedFace,
-    color: Color,
     consumer: DepthPointConsumer
 ) {
     val allEdges = face.items
@@ -211,7 +232,7 @@ fun drawFillFace(
                     toX,
                     scanLine,
                     toDepth,
-                    color,
+                    face.color,
                     consumer
                 )
             }
@@ -228,7 +249,7 @@ private fun getCurrentDepth(edge: Edge, y: Int): UInt{
     return edge.minDepth + ((edge.minY - y) * edge.invDepthSlope).toUInt()
 }
 
-fun drawStrokeFace(face: ProcessedFace, color: Color, consumer: DepthPointConsumer){
+fun drawStrokeFace(face: ProcessedFace, consumer: DepthPointConsumer){
     face.items
         .pairedInCycle()
         .forEach { pair ->
@@ -239,7 +260,7 @@ fun drawStrokeFace(face: ProcessedFace, color: Color, consumer: DepthPointConsum
                 pair.second.point.x,
                 pair.second.point.y,
                 pair.second.point.depth,
-                color,
+                face.color,
                 consumer
             )
         }

@@ -30,6 +30,13 @@ value class Color constructor(val packedValue: Int) {
         get() = unpackUByte3(packedValue)
     val a: UByte
         get() = unpackUByte4(packedValue)
+
+    fun multiplyLightness(value: Double): Color{
+        val r = r.timesNoOverflow(value)
+        val g = g.timesNoOverflow(value)
+        val b = b.timesNoOverflow(value)
+        return Color(r, g, b, a)
+    }
 }
 
 data class ProcessedWorldObject(
@@ -37,7 +44,7 @@ data class ProcessedWorldObject(
     val faces: List<ProcessedFace>
 )
 
-data class ProcessedFace(val items: List<Item>) {
+data class ProcessedFace(val items: List<Item>, val color: Color) {
     data class Item(val point: DepthPoint2d)
 }
 
