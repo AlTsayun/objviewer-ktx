@@ -4,6 +4,8 @@ import com.bsuir.objviewer.core.extension.*
 import org.jetbrains.kotlinx.multik.ndarray.data.D1
 import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
 import java.util.*
+import kotlin.random.Random
+import kotlin.random.nextUBytes
 
 data class FPoint2d(val x: Float, val y: Float)
 
@@ -37,6 +39,24 @@ value class Color constructor(val packedValue: Int) {
         val b = b.timesNoOverflow(value)
         return Color(r, g, b, a)
     }
+
+    companion object {
+        val WHITE = Color(UByte.MAX_VALUE, UByte.MAX_VALUE, UByte.MAX_VALUE, UByte.MAX_VALUE)
+
+        val GRAY = Color(
+            (UByte.MAX_VALUE / 2u).toUByte(),
+            (UByte.MAX_VALUE / 2u).toUByte(),
+            (UByte.MAX_VALUE / 2u).toUByte(),
+            (UByte.MAX_VALUE / 2u).toUByte()
+        )
+
+        @OptIn(ExperimentalUnsignedTypes::class)
+        val RANDOM: Color
+        get() {
+            val bytes = Random.nextUBytes(4)
+            return Color(bytes[0], bytes[1], bytes[2], bytes[3])
+        }
+    }
 }
 
 data class ProcessedWorldObject(
@@ -50,6 +70,7 @@ data class ProcessedFace(val items: List<Item>, val color: Color) {
 
 data class VertexProjections(
     val model: NDArray<Double, D1>,
+    val world: NDArray<Double, D1>,
     val view: NDArray<Double, D1>,
     val projection: NDArray<Double, D1>,
     val viewport: NDArray<Double, D1>,

@@ -26,7 +26,6 @@ inline infix fun <reified T: Number> D1Array<T>.cross(another: D1Array<T>): D1Ar
 }
 
 fun D1Array<Double>.normalized(): D1Array<Double> {
-//    require(this.size == 3)
     return this / sqrt(this.map {it.pow(2)}.sum())
 }
 
@@ -100,12 +99,24 @@ fun UByte.timesNoOverflow(value: Double): UByte{
         .toInt()
         .let {
             if (it < UByte.MIN_VALUE.toInt()){
-                UByte.MIN_VALUE.toInt()
+                UByte.MIN_VALUE
             }
-            if (it < UByte.MAX_VALUE.toInt()){
-                UByte.MIN_VALUE.toInt()
+            if (it > UByte.MAX_VALUE.toInt()){
+                UByte.MAX_VALUE
             }
-            it
+            it.toUByte()
         }
-        .toUByte()
+}
+
+fun UInt.minusNoOverflow(value: Int): UInt{
+    return (this.toInt() - value)
+        .let {
+            if (it < UInt.MIN_VALUE.toInt()){
+                UInt.MIN_VALUE
+            }
+            if (it > UInt.MAX_VALUE.toInt()){
+                UInt.MIN_VALUE
+            }
+            it.toUInt()
+        }
 }

@@ -12,13 +12,28 @@ import org.jetbrains.kotlinx.multik.ndarray.data.get
 import org.jetbrains.kotlinx.multik.ndarray.operations.minus
 import org.jetbrains.kotlinx.multik.ndarray.operations.plus
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.math.tan
+
+typealias Listener = () -> Unit
 
 data class World(
     val objects: MutableList<WorldObject>,
     val lightSources: MutableList<LightSource>,
-    val cam: Camera,
+    val cam: Camera
 ) {
+
+    init {
+        cam.subscribeOnChanged { onChanged() }
+    }
+    private val subscribers: MutableList<Listener> = mutableListOf()
+
+    fun subscribeOnChange(action: Listener){
+        subscribers.add(action)
+    }
+
+    private fun onChanged() = subscribers.forEach { it.invoke() }
+
     fun getViewMatrix(): D2Array<Double> {
             val zAxis = (cam.position - cam.target).normalized()
             val xAxis = (cam.up cross zAxis).normalized()
