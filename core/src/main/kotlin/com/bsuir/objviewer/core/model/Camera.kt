@@ -12,7 +12,7 @@ class Camera(
     speed: Double,
     windowSize: IntSize,
     projectionNear: Double = 1.0,
-    projectionFar: Double = 1000.0,
+    projectionFar: Double = 3000.0,
     fieldOfView: Double = 5.0,
 ) {
     private val subscribers: MutableList<Listener> = mutableListOf()

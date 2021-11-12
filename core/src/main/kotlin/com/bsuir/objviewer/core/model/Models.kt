@@ -2,10 +2,10 @@ package com.bsuir.objviewer.core.model
 
 import com.bsuir.objviewer.core.extension.*
 import org.jetbrains.kotlinx.multik.ndarray.data.D1
+import org.jetbrains.kotlinx.multik.ndarray.data.D1Array
 import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
 import java.util.*
 import kotlin.random.Random
-import kotlin.random.nextUBytes
 
 data class FPoint2d(val x: Float, val y: Float)
 
@@ -23,15 +23,15 @@ data class Edge(
 fun Color(r: UByte, g: UByte, b: UByte, a: UByte): Color = Color(packUBytes(r, g, b, a))
 
 @JvmInline
-value class Color constructor(val packedValue: Int) {
+value class Color constructor(val packed: Int) {
     val r: UByte
-        get() = unpackUByte1(packedValue)
+        get() = unpackUByte1(packed)
     val g: UByte
-        get() = unpackUByte2(packedValue)
+        get() = unpackUByte2(packed)
     val b: UByte
-        get() = unpackUByte3(packedValue)
+        get() = unpackUByte3(packed)
     val a: UByte
-        get() = unpackUByte4(packedValue)
+        get() = unpackUByte4(packed)
 
     fun multiplyLightness(value: Double): Color{
         val r = r.timesNoOverflow(value)
@@ -42,6 +42,10 @@ value class Color constructor(val packedValue: Int) {
 
     companion object {
         val WHITE = Color(UByte.MAX_VALUE, UByte.MAX_VALUE, UByte.MAX_VALUE, UByte.MAX_VALUE)
+        val RED = Color(UByte.MAX_VALUE, 0u, 0u, UByte.MAX_VALUE)
+        val GREEN = Color(0u, UByte.MAX_VALUE, 0u, UByte.MAX_VALUE)
+        val BLUE = Color(0u, 0u, UByte.MAX_VALUE, UByte.MAX_VALUE)
+        val BLACK = Color(0u, 0u, 0u, UByte.MAX_VALUE)
 
         val GRAY = Color(
             (UByte.MAX_VALUE / 2u).toUByte(),
@@ -50,11 +54,10 @@ value class Color constructor(val packedValue: Int) {
             (UByte.MAX_VALUE / 2u).toUByte()
         )
 
-        @OptIn(ExperimentalUnsignedTypes::class)
         val RANDOM: Color
         get() {
-            val bytes = Random.nextUBytes(4)
-            return Color(bytes[0], bytes[1], bytes[2], bytes[3])
+            val value = Random.nextInt()
+            return Color(value and 0xFF)
         }
     }
 }
@@ -68,11 +71,27 @@ data class ProcessedFace(val items: List<Item>, val color: Color) {
     data class Item(val point: DepthPoint2d)
 }
 
-data class VertexProjections(
-    val model: NDArray<Double, D1>,
-    val world: NDArray<Double, D1>,
-    val view: NDArray<Double, D1>,
-    val projection: NDArray<Double, D1>,
-    val viewport: NDArray<Double, D1>,
-    val point: FPoint2d
-)
+class VertexesProjections(size: Int){
+    val model: MutableList<D1Array<Double>> = ArrayList(size)
+    val world: MutableList<D1Array<Double>> = ArrayList(size)
+    val view: MutableList<D1Array<Double>> = ArrayList(size)
+    val projection: MutableList<D1Array<Double>> = ArrayList(size)
+    val viewport: MutableList<D1Array<Double>> = ArrayList(size)
+    val screen: MutableList<DepthPoint2d> = ArrayList(size)
+
+    fun add(
+        modelV: NDArray<Double, D1>,
+        worldV: NDArray<Double, D1>,
+        viewV: NDArray<Double, D1>,
+        projectionV: NDArray<Double, D1>,
+        viewportV: NDArray<Double, D1>,
+        pointV: DepthPoint2d
+    ){
+        model.add(modelV)
+        world.add(worldV)
+        view.add(viewV)
+        projection.add(projectionV)
+        viewport.add(viewportV)
+        screen.add(pointV)
+    }
+}

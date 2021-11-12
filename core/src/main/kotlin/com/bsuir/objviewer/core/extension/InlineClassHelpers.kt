@@ -46,6 +46,27 @@ inline fun unpackInt2(value: Long): Int {
 }
 
 /**
+ * Packs two Int values into one Long value for use in inline classes.
+ */
+inline fun packUInts(val1: UInt, val2: UInt): Long {
+    return val1.toLong().shl(32) or (val2.toLong() and 0xFFFFFFFF)
+}
+
+/**
+ * Unpacks the first Int value in [packInts] from its returned ULong.
+ */
+inline fun unpackUInt1(value: Long): UInt {
+    return value.shr(32).toUInt()
+}
+
+/**
+ * Unpacks the second Int value in [packInts] from its returned ULong.
+ */
+inline fun unpackUInt2(value: Long): UInt {
+    return value.and(0xFFFFFFFF).toUInt()
+}
+
+/**
  * Packs four UByte values into one Int value for use in inline classes.
  */
 inline fun packUBytes(val1: UByte, val2: UByte, val3: UByte, val4: UByte): Int {

@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input
 import com.badlogic.gdx.InputAdapter
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.utils.Scaling
 import com.bsuir.objviewer.ObjViewer
 import com.bsuir.objviewer.core.algorithm.DepthPointConsumer
 import com.bsuir.objviewer.core.algorithm.drawFillFace
@@ -25,16 +26,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 
-class CanvasScreen(private val application: ObjViewer, private val world: World) : KtxScreen {
+class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen {
 
     private val cam = world.cam
     private var mouseSensitivity = 0.5
-    private val viewSensitivity = 1
-    private var yaw = -90.0
+    private val viewSensitivity = 5
+    private var yaw = 0.0
     private var pitch = 0.0
     private val zBuffer = ZBuffer(
-        cam.windowSize.width,
-        cam.windowSize.height,
+        3840,
+        2160,
         Color.WHITE
     )
 
@@ -87,29 +88,35 @@ class CanvasScreen(private val application: ObjViewer, private val world: World)
         Gdx.input.inputProcessor = dragProcessor
         world.subscribeOnChange {
             worldChanged = true
-            println(world.cam)
         }
-
+        zBuffer.setSize(cam.windowSize)
     }
 
     private val pointConsumer : DepthPointConsumer = zBuffer::addPoint
 
+    override fun resize(width: Int, height: Int) {
+        super.resize(width, height)
+        val size = Scaling.fit.apply(cam.windowSize.width.toFloat(), cam.windowSize.height.toFloat(), width.toFloat(), height.toFloat())
+        val viewportX = ((width - size.x) / 2).toInt()
+        val viewportY = ((height - size.y) / 2).toInt()
+        val viewportWidth = size.x.toInt()
+        val viewportHeight = size.y.toInt()
+        Gdx.gl.glViewport(viewportX, viewportY, viewportWidth, viewportHeight)
+    }
+
     override fun render(delta: Float) {
+
 
         if (worldChanged){
             zBuffer.invalidate()
-            processFlow.process { obj ->
-                obj.faces.forEach { face ->
-                        drawFillFace(face, pointConsumer)
-//                    drawStrokeFace(face, pointConsumer)
-                } }
+            processFlow.process { face ->
+                drawFillFace(face, pointConsumer)
+//                drawStrokeFace(face, pointConsumer)
+            }
             worldChanged = false
         }
-
-        val pixmap = Pixmap(zBuffer.width, zBuffer.height, Pixmap.Format.RGBA8888)
-        zBuffer.transferTo { x, y, color ->
-            pixmap.drawPixel(x, y, color.packedValue)
-        }
+        val pixmap = Pixmap(cam.windowSize.width, cam.windowSize.height, Pixmap.Format.RGBA8888)
+        zBuffer.transferTo { x, y, color -> pixmap.drawPixel(x, y, color.packed) }
 
         val img = Texture(pixmap)
         pixmap.dispose()

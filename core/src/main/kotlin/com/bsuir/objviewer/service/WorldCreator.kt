@@ -47,6 +47,7 @@ class WorldCreator {
     init {
         val parser = ObjParser()
         val parsed = parser.parse(Files.readAllLines(Paths.get("cat.obj")))
+//        val parsed = parser.parse(Files.readAllLines(Paths.get("Batmobile.obj")))
 //        val parsed = parser.parse(CUBE_OBJ_CONTENT)
 
         world = World(
@@ -64,8 +65,8 @@ class WorldCreator {
                 cam = Camera(
                     speed = 20.0,
                     front = mk.ndarray(listOf(1.0, 0.0, 0.0)),
-                    position = mk.ndarray(listOf(-5.0, 0.5, 0.5)),
-                    windowSize = IntSize(640, 480)
+                    position = mk.ndarray(listOf(-900.0, 50.0, 0.5)),
+                    windowSize = IntSize(1850, 1018)
                 ),
                 lightSources = mutableListOf(LightSource(0.0, 100.0, 100.0))
             )
