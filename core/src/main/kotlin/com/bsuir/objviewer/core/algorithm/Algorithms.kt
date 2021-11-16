@@ -126,6 +126,8 @@ fun drawFillFace(
                 i1.point to i2.point
             } else {
                 i2.point to i1.point
+
+
             }
             Edge(
                 sorted.first.x,

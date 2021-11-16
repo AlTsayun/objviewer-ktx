@@ -44,66 +44,66 @@ class ProcessFlow(private val world: World) {
         for (obj in objects) {
             obj.faces.stream().parallel()
                 .forEach { face ->
-                var isFaceOutOfProjection = false
-                var isFacePointsOutwards = false
-                val points = VertexesProjections(face.items.size)
+                    var isFaceOutOfProjection = false
+                    var isFacePointsOutwards = false
+                    val points = VertexesProjections(face.items.size)
 
-                for (vertex in face.items.map { it.vertex }) {
-                    val modelV = mk.ndarray(listOf(vertex.x, vertex.y, vertex.z, vertex.w))
-                    val worldV = obj.modelMatrix dot modelV
-                    val viewV = viewMatrix dot worldV
-                    val projectionV = projectionMatrix dot viewV
-                    val viewportV = viewportMatrix dot projectionV
+                    for (vertex in face.items.map { it.vertex }) {
+                        val modelV = mk.ndarray(listOf(vertex.x, vertex.y, vertex.z, vertex.w))
+                        val worldV = obj.modelMatrix dot modelV
+                        val viewV = viewMatrix dot worldV
+                        val projectionV = projectionMatrix dot viewV
+                        val viewportV = viewportMatrix dot projectionV
 
-                    val point = DepthPoint2d(
-                        x = (cam.windowSize.width - (viewportV[0] / viewportV[3])).toInt(),
-                        y = (cam.windowSize.height - (viewportV[1] / viewportV[3])).toInt(),
-                        depth = (viewportV[2] * 100).toUInt()
-                    )
-                    points.add(modelV, worldV, viewV, projectionV, viewportV, point)
+                        val point = DepthPoint2d(
+                            x = (cam.windowSize.width - (viewportV[0] / viewportV[3])).toInt(),
+                            y = (cam.windowSize.height - (viewportV[1] / viewportV[3])).toInt(),
+                            depth = (viewportV[2] * 100).toUInt()
+                        )
+                        points.add(modelV, worldV, viewV, projectionV, viewportV, point)
 
-                    if (projectionV[2] < cam.projectionNear) {
-                        isFaceOutOfProjection = true
+                        if (projectionV[2] < cam.projectionNear) {
+                            isFaceOutOfProjection = true
+                        }
+                    }
+
+                    // sort out faces fully out of view
+                    isFaceOutOfProjection = isFaceOutOfProjection || points.screen.all {
+                        it.x < 0 || it.x > cam.windowSize.width ||
+                                it.y < 0 || it.y > cam.windowSize.height
+                    }
+
+                    val faceNormal = getNormal(points.world)
+
+                    // cos of an angle between camera and face normal
+                    val camFaceCos = faceNormal dot getFaceDirection(cam.position, points.world)
+
+                    if (camFaceCos > 0.0) {
+                        isFacePointsOutwards = true
+                    }
+
+                    val invLightVectors = lightSources.map { light ->
+                        getCenter(points.world)
+                            .minus(light.coords)
+                            .normalized()
+                    }
+                    val lightness = invLightVectors.map {
+                        // cos of an angle between light source and face normal
+                        val lightFaceCos = (it dot faceNormal)
+                        val diffuse = (lightFaceCos + 1) / 2
+                        val specular = 1 - (lightFaceCos - camFaceCos) / 2
+                        return@map (diffuse + specular)
+                    }.average()
+
+                    if (!isFaceOutOfProjection && !isFacePointsOutwards) {
+                        consumer.invoke(
+                            ProcessedFace(
+                                points.screen.map { ProcessedFace.Item(it) },
+                                Color.GRAY.multiplyLightness(lightness)
+                            )
+                        )
                     }
                 }
-
-                // sort out faces fully out of view
-                isFaceOutOfProjection = isFaceOutOfProjection || points.screen.all {
-                    it.x < 0 || it.x > cam.windowSize.width ||
-                    it.y < 0 || it.y > cam.windowSize.height
-                }
-
-                val faceNormal = getNormal(points.world)
-
-                // cos of an angle between camera and face normal
-                val camFaceCos = faceNormal dot getFaceDirection(cam.position, points.world)
-
-                if (camFaceCos > 0.0) {
-                    isFacePointsOutwards = true
-                }
-
-                val invLightVectors = lightSources.map { light ->
-                    getCenter(points.world)
-                        .minus(light.coords)
-                        .normalized()
-                }
-                val lightness = invLightVectors.map {
-                    // cos of an angle between light source and face normal
-                    val lightFaceCos = (it dot faceNormal)
-                    val diffuse = (lightFaceCos + 1) / 2
-                    val specular = 1 - (lightFaceCos - camFaceCos) / 2
-                    return@map (diffuse + specular)
-                }.average()
-
-                if (!isFaceOutOfProjection && !isFacePointsOutwards) {
-                    consumer.invoke(
-                        ProcessedFace(
-                            points.screen.map { ProcessedFace.Item(it) },
-                            Color.GRAY.multiplyLightness(lightness)
-                        )
-                    )
-                }
-            }
 
         }
     }

@@ -105,8 +105,6 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
     }
 
     override fun render(delta: Float) {
-
-
         if (worldChanged){
             zBuffer.invalidate()
             processFlow.process { face ->
@@ -119,12 +117,13 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
         zBuffer.transferTo { x, y, color -> pixmap.drawPixel(x, y, color.packed) }
 
         val img = Texture(pixmap)
-        pixmap.dispose()
 
         application.batch.begin()
         application.batch.draw(img, 0f, 0f)
         application.batch.end()
 
+        pixmap.dispose()
+        img.dispose()
         processInput()
     }
 

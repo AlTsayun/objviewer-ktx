@@ -15,7 +15,7 @@ class WorldCreator {
         "v 0 100 0", // 3
         "v 0 100 100", // 4
         "v 100 0 0", // 5
-        "v 100 0 10", // 6
+        "v 100 0 100", // 6
         "v 100 100 0", // 7
         "v 100 100 100", // 8
 
@@ -46,7 +46,9 @@ class WorldCreator {
 
     init {
         val parser = ObjParser()
-        val parsed = parser.parse(Files.readAllLines(Paths.get("cat.obj")))
+//        val parsed = parser.parse(Files.readAllLines(Paths.get("cat.obj")))
+        val parsed = parser.parse(Files.readAllLines(Paths.get("rigged_hand/Rigged Hand.obj")))
+//        val parsed = parser.parse(Files.readAllLines(Paths.get("nissan_laurel_c31_turbo/laurel.obj")))
 //        val parsed = parser.parse(Files.readAllLines(Paths.get("Batmobile.obj")))
 //        val parsed = parser.parse(CUBE_OBJ_CONTENT)
 
@@ -63,10 +65,12 @@ class WorldCreator {
                     }
                 ),
                 cam = Camera(
-                    speed = 20.0,
+                    speed = 0.01,
                     front = mk.ndarray(listOf(1.0, 0.0, 0.0)),
-                    position = mk.ndarray(listOf(-900.0, 50.0, 0.5)),
-                    windowSize = IntSize(1850, 1018)
+//                    position = mk.ndarray(listOf(-900.0, 50.0, 0.5)),
+                    position = mk.ndarray(listOf(-1.0, 1.0, 0.5)),
+//                    windowSize = IntSize(1850, 1018)
+                    windowSize = IntSize(640, 480)
                 ),
                 lightSources = mutableListOf(LightSource(0.0, 100.0, 100.0))
             )
