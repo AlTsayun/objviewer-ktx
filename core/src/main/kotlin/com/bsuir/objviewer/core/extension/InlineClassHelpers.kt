@@ -32,6 +32,14 @@ inline fun packInts(val1: Int, val2: Int): Long {
 }
 
 /**
+ * Packs Float and Int values into one Long value for use in inline classes.
+ */
+inline fun packFloatAndInt(val1: Float, val2: Int): Long {
+    val v1 = val1.toBits().toLong()
+    return v1.shl(32) or (val2.toLong() and 0xFFFFFFFF)
+}
+
+/**
  * Unpacks the first Int value in [packInts] from its returned ULong.
  */
 inline fun unpackInt1(value: Long): Int {

@@ -2,15 +2,15 @@ package com.bsuir.objviewer.core.algorithm
 
 import com.bsuir.objviewer.core.extension.*
 import com.bsuir.objviewer.core.model.*
-import org.jetbrains.kotlinx.multik.api.linalg.dot
+import com.bsuir.objviewer.core.textureprovider.PlainColorTextureProvider
+import com.bsuir.objviewer.core.textureprovider.TextureProvider
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
 import org.jetbrains.kotlinx.multik.ndarray.data.D1Array
 import org.jetbrains.kotlinx.multik.ndarray.data.get
-import org.jetbrains.kotlinx.multik.ndarray.operations.minus
 import kotlin.math.abs
 
-typealias DepthPointConsumer = (x: Int, y: Int, depth: UInt, color: Color) -> Unit
+typealias DepthPointConsumer = (x: Int, y: Int, depth: Float, color: Color) -> Unit
 
 fun getCenter(points: List<D1Array<Double>>): D1Array<Double>{
     return mk.ndarray(listOf(
@@ -23,146 +23,143 @@ fun getCenter(points: List<D1Array<Double>>): D1Array<Double>{
 fun drawLine(
     x1: Int,
     y1: Int,
-    depth1: UInt,
+    xt1: Float,
+    yt1: Float,
+    lightness1: Float,
+    depth1: Float,
     x2: Int,
     y2: Int,
-    depth2: UInt,
-    color: Color,
+    xt2: Float,
+    yt2: Float,
+    lightness2: Float,
+    depth2: Float,
+    textureProvider: TextureProvider,
     consumer: DepthPointConsumer
 ) {
-    bresenham(x1, y1, depth1, x2, y2, depth2, color, consumer)
+    dda(
+        x1.toFloat(),
+        y1.toFloat(),
+        xt1,
+        yt1,
+        lightness1,
+        depth1,
+        x2.toFloat(),
+        y2.toFloat(),
+        xt2,
+        yt2,
+        lightness2,
+        depth2,
+        textureProvider,
+        consumer
+    )
 }
 
-private fun bresenham(
-    x1: Int,
-    y1: Int,
-    depth1: UInt,
-    x2: Int,
-    y2: Int,
-    depth2: UInt,
-    color: Color,
-    consumer: (x: Int, y: Int, depth: UInt, color: Color) -> Unit
+
+private fun dda(
+    x1: Float,
+    y1: Float,
+    xt1: Float,
+    yt1: Float,
+    lightness1: Float,
+    depth1: Float,
+    x2: Float,
+    y2: Float,
+    xt2: Float,
+    yt2: Float,
+    lightness2: Float,
+    depth2: Float,
+    textureProvider: TextureProvider,
+    consumer: DepthPointConsumer
 ) {
-    val deltaX = abs(x2 - x1)
-    val deltaY = abs(y2 - y1)
-    val deltaDepth = abs(depth2.toInt() - depth1.toInt())
-    val dirX = sign(x2 - x1)
-    val dirY = sign(y2 - y1)
-    val dirDepth = sign(depth2.toInt() - depth1.toInt())
+    val deltaX = x2 - x1
+    val deltaXt = xt2 - xt1
+    val deltaY = y2 - y1
+    val deltaYt = yt2 - yt1
+    val deltaDepth = depth2 - depth1
+    val deltaLightness = lightness2 - lightness1
 
-    var x = x1
-    var y = y1
-    var depth = depth1
-
-    consumer(x1, y1, depth1, color)
-
-    if (deltaY >= deltaX && deltaY >= deltaDepth) {
-        //iteration by y
-        var errorX = 2 * deltaX - deltaY
-        var errorDepth = 2 * deltaDepth - deltaY
-        for (i: Int in 1..deltaY) {
-            y += dirY
-            if (errorX >= 0) {
-                x += dirX
-                errorX -= 2 * deltaY
-            }
-            if (errorDepth >= 0) {
-                depth = depth.minusNoOverflow(dirDepth)
-                errorDepth -= 2 * deltaY
-            }
-            errorX += 2 * deltaX
-            errorDepth += 2 * deltaDepth
-            consumer(x, y, depth, color)
-        }
-    } else if (deltaDepth >= deltaX && deltaDepth >= deltaY)  {
-        //iteration by depth
-        var errorX = 2 * deltaX - deltaDepth
-        var errorY = 2 * deltaY - deltaDepth
-        for (i: Int in 1..deltaDepth) {
-            depth = depth.minusNoOverflow(dirDepth)
-            if (errorX >= 0) {
-                x += dirX
-                errorX -= 2 * deltaDepth
-            }
-            if (errorY >= 0) {
-                y += dirY
-                errorY -= 2 * deltaDepth
-            }
-            errorX += 2 * deltaX
-            errorY += 2 * deltaY
-            consumer(x, y, depth, color)
-        }
+    val delta = if (abs(deltaX) > abs(deltaY)) {
+        abs(deltaX)
     } else {
-        //iteration by x
-        var errorY = 2 * deltaY - deltaX
-        var errorDepth = 2 * deltaDepth - deltaX
-        for (i: Int in 1..deltaX) {
-            x += dirX
-            if (errorY >= 0) {
-                y += dirY
-                errorY -= 2 * deltaX
-            }
-            if (errorDepth >= 0) {
-                depth = depth.minusNoOverflow(dirDepth)
-                errorDepth -= 2 * deltaX
-            }
-            errorY += 2 * deltaY
-            errorDepth += 2 * deltaDepth
-            consumer(x, y, depth, color)
-        }
+        abs(deltaY)
+    } + 1
+
+    val dirX = deltaX / delta
+    val dirXt = deltaXt / delta
+    val dirY = deltaY / delta
+    val dirYt = deltaYt / delta
+    val dirDepth = deltaDepth / delta
+    val dirLightness = deltaLightness / delta
+
+    var x: Float = x1
+    var y: Float = y1
+    var xt = xt1
+    var yt = yt1
+    var depth = depth1
+    var lightness = lightness1
+
+    for (i in 0..delta.toInt()) {
+        consumer(x.toInt(), y.toInt(), depth, textureProvider.get(xt, yt).multiplyLightness(lightness))
+        x += dirX
+        y += dirY
+        xt += dirXt
+        yt += dirYt
+        depth += dirDepth
+        lightness += dirLightness
     }
 }
 
 fun drawFillFace(
     face: ProcessedFace,
+    textureProvider: TextureProvider,
     consumer: DepthPointConsumer
 ) {
-    val allEdges = face.items
+    val allEdges = face.vertices
         .pairedInCycle()
         .map { pair ->
             val i1 = pair.first
             val i2 = pair.second
-            val sorted = if (i1.point.y < i2.point.y) {
-                i1.point to i2.point
+            if (i1.point.y < i2.point.y) {
+                Edge(i1, i2)
             } else {
-                i2.point to i1.point
-
-
+                Edge(i2, i1)
             }
-            Edge(
-                sorted.first.x,
-                sorted.first.y,
-                sorted.first.depth,
-                sorted.second.y,
-                (sorted.second.depth - sorted.first.depth).toFloat() / (sorted.second.y - sorted.first.y).toFloat(),
-                (sorted.second.x - sorted.first.x) / (sorted.second.y - sorted.first.y).toFloat()
-            )
         }
 
-    val yComparator = compareBy<Edge> { it.minY }
-    val xComparator = compareBy<Edge> { it.minX }
+    val yComparator = compareBy<Edge> { it.lowerPoint.y }
+    val xComparator = compareBy<Edge> { it.lowerPoint.x }
     val globalEdges = allEdges
 //        .filter { it.invXSlope != 0f }
         .sortedWith(yComparator.then(xComparator))
 
     if (globalEdges.isNotEmpty()) {
-        for (scanLine: Int in globalEdges.first().minY until globalEdges.last().maxY){
+        for (scanLine: Int in globalEdges.first().lowerPoint.y until globalEdges.last().higherY){
             globalEdges
-                .filter { (it.minY <= scanLine) && (it.maxY > scanLine) }
+                .filter { (it.lowerPoint.y <= scanLine) && (it.higherY > scanLine) }
                 .chunked(2)
                 .forEach {
                     val fromX = getCurrentX(it[0], scanLine)
-                    val toX = getCurrentX(it[1], scanLine)
                     val fromDepth = getCurrentDepth(it[0], scanLine)
+                    val fromTexture = getCurrentTexture(it[0], scanLine)
+                    val fromLightness = getCurrentLightness(it[0], scanLine)
+                    val toX = getCurrentX(it[1], scanLine)
                     val toDepth = getCurrentDepth(it[1], scanLine)
+                    val toTexture = getCurrentTexture(it[1], scanLine)
+                    val toLightness = getCurrentLightness(it[1], scanLine)
                     drawLine(
                         fromX,
                         scanLine,
+                        fromTexture.x,
+                        fromTexture.y,
+                        fromLightness,
                         fromDepth,
                         toX,
                         scanLine,
+                        toTexture.x,
+                        toTexture.y,
+                        toLightness,
                         toDepth,
-                        face.color,
+                        textureProvider,
                         consumer
                     )
                 }
@@ -172,25 +169,43 @@ fun drawFillFace(
 }
 
 private fun getCurrentX(edge: Edge, y: Int): Int{
-    return edge.minX + ((y - edge.minY) * edge.invXSlope).toInt()
+    return edge.lowerPoint.x + ((y - edge.lowerPoint.y) * edge.invXSlope).toInt()
 }
 
-private fun getCurrentDepth(edge: Edge, y: Int): UInt{
-    return edge.minDepth - ((edge.minY - y) * edge.invDepthSlope).toUInt()
+private fun getCurrentDepth(edge: Edge, y: Int): Float{
+    return edge.lowerPoint.depth + ((y - edge.lowerPoint.y) * edge.invDepthSlope)
 }
 
-fun drawStrokeFace(face: ProcessedFace, consumer: DepthPointConsumer){
-    face.items
+private fun getCurrentLightness(edge: Edge, y: Int): Float{
+    return edge.lowerLightness + ((y - edge.lowerPoint.y) * edge.invLightnessSlope)
+}
+
+private fun getCurrentTexture(edge: Edge, y: Int): FPoint2d{
+    return FPoint2d(
+        edge.lowerTexture.x + ((y - edge.lowerPoint.y) * edge.invTextureXSlope),
+        edge.lowerTexture.y + ((y - edge.lowerPoint.y) * edge.invTextureYSlope)
+    )
+
+}
+
+fun drawStrokeFace(face: ProcessedFace, consumer: DepthPointConsumer, color: Color){
+    face.vertices
         .pairedInCycle()
         .forEach { pair ->
             drawLine(
                 pair.first.point.x,
                 pair.first.point.y,
+                0f,
+                0f,
+                1f,
                 pair.first.point.depth,
                 pair.second.point.x,
                 pair.second.point.y,
+                0f,
+                0f,
+                1f,
                 pair.second.point.depth,
-                face.color,
+                PlainColorTextureProvider(color),
                 consumer
             )
         }

@@ -25,8 +25,16 @@ inline infix fun <reified T: Number> D1Array<T>.cross(another: D1Array<T>): D1Ar
     )
 }
 
+/**
+ * Normalizes vector by its length. For all zeros returns same vector.
+ */
 fun D1Array<Double>.normalized(): D1Array<Double> {
-    return this / sqrt(this.map {it.pow(2)}.sum())
+    val length = this.map { it.pow(2) }.sum()
+    return if (length != 0.0) {
+        this / sqrt(length)
+    } else {
+        this
+    }
 }
 
 fun sign(a: Int) = when {
@@ -94,7 +102,7 @@ fun sign(a: Int) = when {
 //@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
 ///*internal*/ inline operator fun UByte.minus(other: Number): UByte = (this.toByte() - other).toByte().toUByte()
 
-fun UByte.timesNoOverflow(value: Double): UByte{
+fun UByte.timesNoOverflow(value: Float): UByte{
     return (this.toDouble() * value)
         .toInt()
         .let {

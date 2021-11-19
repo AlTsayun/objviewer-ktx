@@ -15,6 +15,9 @@ import com.bsuir.objviewer.core.extension.normalized
 import com.bsuir.objviewer.core.model.Color
 import com.bsuir.objviewer.core.model.World
 import com.bsuir.objviewer.core.processflow.ProcessFlow
+import com.bsuir.objviewer.core.textureprovider.ImageTextureProvider
+import com.bsuir.objviewer.core.textureprovider.PlainColorTextureProvider
+import com.bsuir.objviewer.core.textureprovider.TextureProvider
 import com.bsuir.objviewer.core.zbuffer.ZBuffer
 import ktx.app.KtxScreen
 import org.jetbrains.kotlinx.multik.api.mk
@@ -22,6 +25,8 @@ import org.jetbrains.kotlinx.multik.api.ndarray
 import org.jetbrains.kotlinx.multik.ndarray.operations.minus
 import org.jetbrains.kotlinx.multik.ndarray.operations.plus
 import org.jetbrains.kotlinx.multik.ndarray.operations.times
+import java.io.File
+import javax.imageio.ImageIO
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -40,6 +45,9 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
     )
 
     private var worldChanged = true
+
+//    private val textureProvider: TextureProvider = PlainColorTextureProvider(Color.GRAY)
+    private val textureProvider: TextureProvider = ImageTextureProvider(ImageIO.read(File("./rigged_hand/textures/HAND_C.jpg")))
 
     private val dragProcessor = object : InputAdapter() {
         private var touchX = 0
@@ -92,6 +100,9 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
         zBuffer.setSize(cam.windowSize)
     }
 
+    private val pixmap = Pixmap(cam.windowSize.width, cam.windowSize.height, Pixmap.Format.RGBA8888)
+    private val pixels = pixmap.pixels.asIntBuffer()
+
     private val pointConsumer : DepthPointConsumer = zBuffer::addPoint
 
     override fun resize(width: Int, height: Int) {
@@ -108,13 +119,15 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
         if (worldChanged){
             zBuffer.invalidate()
             processFlow.process { face ->
-                drawFillFace(face, pointConsumer)
-//                drawStrokeFace(face, pointConsumer)
+                drawFillFace(face, textureProvider, pointConsumer)
+//                drawStrokeFace(face, pointConsumer, Color.BLACK)
             }
+            pixels.clear()
+            zBuffer.transferTo { x, y, color -> pixels.put(y * cam.windowSize.width + x, color.packed) }
+            pixels.clear()
+
             worldChanged = false
         }
-        val pixmap = Pixmap(cam.windowSize.width, cam.windowSize.height, Pixmap.Format.RGBA8888)
-        zBuffer.transferTo { x, y, color -> pixmap.drawPixel(x, y, color.packed) }
 
         val img = Texture(pixmap)
 
@@ -122,9 +135,13 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
         application.batch.draw(img, 0f, 0f)
         application.batch.end()
 
-        pixmap.dispose()
         img.dispose()
         processInput()
+    }
+
+    override fun dispose() {
+        super.dispose()
+        pixmap.dispose()
     }
 
     private fun processInput() {

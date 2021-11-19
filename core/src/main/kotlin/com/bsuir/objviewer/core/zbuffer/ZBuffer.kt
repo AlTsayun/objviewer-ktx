@@ -1,8 +1,6 @@
 package com.bsuir.objviewer.core.zbuffer
 
-import com.bsuir.objviewer.core.extension.packInts
-import com.bsuir.objviewer.core.extension.unpackInt1
-import com.bsuir.objviewer.core.extension.unpackInt2
+import com.bsuir.objviewer.core.extension.*
 import com.bsuir.objviewer.core.model.Color
 import com.bsuir.objviewer.core.model.IntSize
 
@@ -18,15 +16,15 @@ value class Coordinates internal constructor(private val packedValue: Long) {
 private fun Coordinates(x: Int, y: Int) = Coordinates(packInts(x, y))
 
 @JvmInline
-value class DepthAndColor internal constructor(private val packedValue: Long) {
-    val depth: UInt
-        get() = unpackInt1(packedValue).toUInt()
+value class DepthAndColor internal constructor(val packed: Long) {
+    val depth: Float
+        get() = unpackFloat1(packed)
 
     val color: Color
-        get() = Color(unpackInt2(packedValue))
+        get() = Color(unpackInt2(packed))
 }
 
-private fun DepthAndColor(depth: UInt, color: Color) = DepthAndColor(packInts(depth.toInt(), color.packed))
+private fun DepthAndColor(depth: Float, color: Color) = DepthAndColor(packFloatAndInt(depth, color.packed))
 
 typealias PointConsumer = (x: Int, y: Int, color: Color) -> Unit
 
@@ -41,12 +39,8 @@ class ZBuffer(
 
     private val items: Array<Array<DepthAndColor>> =
         Array(maxHeight) {
-            Array(maxWidth) { DepthAndColor(UInt.MAX_VALUE, blank) }
+            Array(maxWidth) { DepthAndColor(Float.MAX_VALUE, blank) }
         }
-
-    operator fun get(i: Int): Array<DepthAndColor> {
-        return items[i]
-    }
 
     fun setSize(size: IntSize){
         if (size != IntSize(widthRange.last, heightRange.last)){
@@ -63,15 +57,15 @@ class ZBuffer(
     fun invalidate() {
         for (y: Int in heightRange) {
             for (x: Int in widthRange) {
-                items[y][x] = DepthAndColor(UInt.MAX_VALUE, blank)
+                items[y][x] = DepthAndColor(Float.MAX_VALUE, blank)
             }
         }
     }
 
-    fun addPoint(x: Int, y: Int, depth: UInt, color: Color) {
+    fun addPoint(x: Int, y: Int, depth: Float, color: Color) {
         if (x in widthRange && y in heightRange) {
-            if (this[y][x].depth > depth) {
-                this[y][x] = DepthAndColor(depth, color)
+            if (items[y][x].depth > depth) {
+                items[y][x] = DepthAndColor(depth, color)
             }
         }
     }
