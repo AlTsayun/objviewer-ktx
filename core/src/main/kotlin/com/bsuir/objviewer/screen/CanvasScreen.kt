@@ -8,16 +8,16 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.utils.Scaling
 import com.bsuir.objviewer.ObjViewer
 import com.bsuir.objviewer.core.algorithm.DepthPointConsumer
-import com.bsuir.objviewer.core.algorithm.drawFillFace
-import com.bsuir.objviewer.core.algorithm.drawStrokeFace
+import com.bsuir.objviewer.core.assetsprovider.*
 import com.bsuir.objviewer.core.extension.cross
 import com.bsuir.objviewer.core.extension.normalized
 import com.bsuir.objviewer.core.model.Color
 import com.bsuir.objviewer.core.model.World
-import com.bsuir.objviewer.core.processflow.ProcessFlow
-import com.bsuir.objviewer.core.textureprovider.ImageTextureProvider
-import com.bsuir.objviewer.core.textureprovider.PlainColorTextureProvider
-import com.bsuir.objviewer.core.textureprovider.TextureProvider
+import com.bsuir.objviewer.core.processflow.ProcessFlowImpl
+import com.bsuir.objviewer.core.renderer.PhongRenderer
+import com.bsuir.objviewer.core.renderer.LambertRenderer
+import com.bsuir.objviewer.core.renderer.StrokeRenderer
+import com.bsuir.objviewer.core.renderer.FullPackedRenderer
 import com.bsuir.objviewer.core.zbuffer.ZBuffer
 import ktx.app.KtxScreen
 import org.jetbrains.kotlinx.multik.api.mk
@@ -31,7 +31,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 
-class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen {
+class CanvasScreen(private val application: ObjViewer, private val world: World) : KtxScreen {
 
     private val cam = world.cam
     private var mouseSensitivity = 0.5
@@ -45,9 +45,6 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
     )
 
     private var worldChanged = true
-
-//    private val textureProvider: TextureProvider = PlainColorTextureProvider(Color.GRAY)
-    private val textureProvider: TextureProvider = ImageTextureProvider(ImageIO.read(File("./rigged_hand/textures/HAND_C.jpg")))
 
     private val dragProcessor = object : InputAdapter() {
         private var touchX = 0
@@ -90,7 +87,7 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
         }
     }
 
-    private val processFlow: ProcessFlow = ProcessFlow(world)
+    private val processFlow: ProcessFlowImpl = ProcessFlowImpl(world)
 
     init {
         Gdx.input.inputProcessor = dragProcessor
@@ -115,15 +112,31 @@ class CanvasScreen(private val application: ObjViewer, world: World) : KtxScreen
         Gdx.gl.glViewport(viewportX, viewportY, viewportWidth, viewportHeight)
     }
 
+
+    private val textureProvider: TextureProvider = ImageTextureProvider(ImageIO.read(File("./Head/Albedo Map.png")))
+    private val normalProvider: NormalProvider = ImageNormalProvider(ImageIO.read(File("./Head/Normal Map.png")))
+//    private val specularProvider: SpecularProvider = ImageSpecularProvider(ImageIO.read(File("./Head/Specular Map.png")))
+    private val specularProvider: SpecularProvider = ConstantSpecularProvider(1f)
+    private val fullPackedRenderer = FullPackedRenderer(pointConsumer)
+    private val phongRenderer = PhongRenderer(pointConsumer, Color.GRAY)
+    private val lambertRenderer = LambertRenderer(pointConsumer, Color.GRAY)
+    private val strokeRenderer = StrokeRenderer(pointConsumer, Color.GRAY)
+
     override fun render(delta: Float) {
         if (worldChanged){
             zBuffer.invalidate()
-            processFlow.process { face ->
-                drawFillFace(face, textureProvider, pointConsumer)
-//                drawStrokeFace(face, pointConsumer, Color.BLACK)
-            }
+
+            fullPackedRenderer.setupWorldEnvironment(cam.position, world.lightSources, textureProvider, normalProvider, specularProvider)
+//            phongRenderer.setupWorldEnvironment(cam.position, world.lightSources)
+//            phongRenderer.setupWorldEnvironment(cam.position, world.lightSources)
+//            lambertRenderer.setupWorldEnvironment(world.lightSources)
+
+            processFlow.process(fullPackedRenderer)
+//            processFlow.process(phongRenderer)
+//            processFlow.process(strokeRenderer)
+//            processFlow.process(lambertRenderer)
             pixels.clear()
-            zBuffer.transferTo { x, y, color -> pixels.put(y * cam.windowSize.width + x, color.packed) }
+            zBuffer.transferTo { x, y, color -> pixels.put(y * cam.windowSize.width + x, color.packedRGBA) }
             pixels.clear()
 
             worldChanged = false

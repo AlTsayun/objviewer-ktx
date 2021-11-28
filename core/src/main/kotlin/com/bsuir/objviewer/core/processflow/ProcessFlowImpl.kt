@@ -1,9 +1,11 @@
 package com.bsuir.objviewer.core.processflow
 
-import com.bsuir.objviewer.core.algorithm.getCenter
+import com.bsuir.objviewer.core.assetsprovider.ImageTextureProvider
 import com.bsuir.objviewer.core.extension.cross
 import com.bsuir.objviewer.core.extension.normalized
 import com.bsuir.objviewer.core.model.*
+import com.bsuir.objviewer.core.renderer.Renderer
+import com.bsuir.objviewer.core.assetsprovider.PlainColorTextureProvider
 import org.jetbrains.kotlinx.multik.api.linalg.dot
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.ndarray
@@ -11,8 +13,15 @@ import org.jetbrains.kotlinx.multik.ndarray.data.D1Array
 import org.jetbrains.kotlinx.multik.ndarray.data.D2Array
 import org.jetbrains.kotlinx.multik.ndarray.data.get
 import org.jetbrains.kotlinx.multik.ndarray.operations.minus
+import java.io.File
+import javax.imageio.ImageIO
 
-class ProcessFlow(private val world: World) {
+
+interface ProcessFlow {
+    fun process(renderer: Renderer)
+}
+
+class ProcessFlowImpl(private val world: World) {
 
     private var viewMatrix = world.getViewMatrix()
     private var projectionMatrix = world.getProjectionMatrix()
@@ -35,12 +44,11 @@ class ProcessFlow(private val world: World) {
         viewportMatrix = world.getViewportMatrix()
     }
 
-    fun process(consumer: (ProcessedFace) -> Unit) = with(world) {
+    fun process(renderer: Renderer) = with(world) {
         if (isMatricesOutdated){
             updateMatrices()
             isMatricesOutdated = false
         }
-
         for (obj in objects) {
             obj.faces.stream().parallel()
                 .forEach { face ->
@@ -53,29 +61,23 @@ class ProcessFlow(private val world: World) {
                     if (!isFaceDiscarded(points, cam, camFaceCos)) {
                         val vertexes = points.screen.mapIndexed {i, screen ->
 
-                            val world = points.world[i][0..3]
-                            val invLightVectors = lightSources.map { light ->
-                                (world - light.coords).normalized()
-                            }
-
-                            val lightness = invLightVectors.map {
-                                // cos of an angle between vector from light source to vertex and face normal
-                                val lightFaceCos = (it dot faceNormal)
-                                val diffuse = (lightFaceCos + 1) / 2
-                                val specular = 1 - (lightFaceCos - camFaceCos) / 2
-                                return@map (diffuse + specular) / 2
-                            }.average().toFloat()
-
                             val texture = face.items[i].texture?.let {
                                 FPoint2d(it.u.toFloat(), it.v?.toFloat() ?: 0f)
                             } ?: FPoint2d(0f, 0f)
 
-                            return@mapIndexed ProcessedFace.Vertex(screen, lightness, texture)
+                            val normal = face.items[i].normal?.let {
+                                mk.ndarray(listOf(it.i, it.j, it.k))
+                            } ?: faceNormal
+
+                            val world = points.world[i].let {
+                                mk.ndarray(listOf(it[0], it[1], it[2]))
+                            }
+
+                            return@mapIndexed ProcessedFace.Vertex(world, screen, normal, texture)
                         }
-                        consumer.invoke(ProcessedFace(vertexes))
+                        renderer.consumeFace(ProcessedFace(vertexes))
                     }
                 }
-
         }
     }
 

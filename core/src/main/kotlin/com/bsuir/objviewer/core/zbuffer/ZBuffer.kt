@@ -24,7 +24,7 @@ value class DepthAndColor internal constructor(val packed: Long) {
         get() = Color(unpackInt2(packed))
 }
 
-private fun DepthAndColor(depth: Float, color: Color) = DepthAndColor(packFloatAndInt(depth, color.packed))
+private fun DepthAndColor(depth: Float, color: Color) = DepthAndColor(packFloatAndInt(depth, color.packedRGBA))
 
 typealias PointConsumer = (x: Int, y: Int, color: Color) -> Unit
 

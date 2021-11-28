@@ -109,5 +109,5 @@ inline fun unpackUByte3(value: Int): UByte {
  * Unpacks the fourth UByte value in [packUBytes] from its returned UInt.
  */
 inline fun unpackUByte4(value: Int): UByte {
-    return value.and(0xFFFF).toUByte()
+    return value.and(0xFF).toUByte()
 }

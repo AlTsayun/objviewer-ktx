@@ -102,17 +102,28 @@ fun sign(a: Int) = when {
 //@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST", "IMPLICIT_CAST_TO_ANY")
 ///*internal*/ inline operator fun UByte.minus(other: Number): UByte = (this.toByte() - other).toByte().toUByte()
 
-fun UByte.timesNoOverflow(value: Float): UByte{
-    return (this.toDouble() * value)
-        .toInt()
+infix fun UByte.timesNoOverflow(value: Double): UByte{
+    return (this.toInt() * value)
         .let {
             if (it < UByte.MIN_VALUE.toInt()){
                 UByte.MIN_VALUE
+            } else if (it > UByte.MAX_VALUE.toInt()){
+                UByte.MAX_VALUE
+            } else {
+                it.toInt().toUByte()
             }
+        }
+}
+
+infix fun UByte.plusNoOverflow(value: UByte): UByte{
+    return (this + value)
+        .toInt()
+        .let {
             if (it > UByte.MAX_VALUE.toInt()){
                 UByte.MAX_VALUE
+            } else {
+                it.toUByte()
             }
-            it.toUByte()
         }
 }
 
@@ -121,10 +132,10 @@ fun UInt.minusNoOverflow(value: Int): UInt{
         .let {
             if (it < UInt.MIN_VALUE.toInt()){
                 UInt.MIN_VALUE
-            }
-            if (it > UInt.MAX_VALUE.toInt()){
+            } else if (it > UInt.MAX_VALUE.toInt()){
                 UInt.MIN_VALUE
+            } else {
+                it.toUInt()
             }
-            it.toUInt()
         }
 }
